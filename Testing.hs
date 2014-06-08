@@ -1,5 +1,6 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE Rank2Types                #-}
 
 module Main where
 
@@ -9,6 +10,9 @@ import Diagrams.Backend.SVG
 import Diagrams.Backend.Rasterific
 import Data.List.Split              (splitOn)
 import Options.Applicative
+
+type Diagram2d = (Renderable (Path R2) b, Renderable Text b, Backend b R2) 
+              => Diagram b R2
 
 data Opts = Opts
   { widthOpt  :: Maybe Int
@@ -32,14 +36,14 @@ diagramOpts = Opts
        <> metavar "OUTPUT"
        <> help "OUTPUT file")
 
-writeDiagram :: Opts -> IO ()
-writeDiagram opts =
+writeDiagram :: Diagram2d -> Opts -> IO ()
+writeDiagram d opts =
   case splitOn "." (output opts) of
     [""] -> putStrLn "No output file given."
     ps | last ps `elem` ["png"] -> do
-           renderRasterific (output opts) sizeSpec 100 diagram
+           renderRasterific (output opts) sizeSpec 100 (d :: Diagram2d)
        | last ps `elem` ["svg"] -> do
-           renderSVG (output opts) sizeSpec diagram
+           renderSVG (output opts) sizeSpec (d :: Diagram2d)
        | otherwise -> putStrLn $ "Unknown file type: " ++ last ps
   where
     sizeSpec = 
@@ -50,12 +54,11 @@ writeDiagram opts =
         (Just w, Just h)   -> Dims (fromIntegral w) (fromIntegral h)
 
 main :: IO ()
-main = execParser opts >>= writeDiagram
+main = execParser opts >>= writeDiagram diagram
   where
     opts = info diagramOpts mempty 
     
 ------------------------------------------------------------------------------
 
-diagram :: (Renderable (Path R2) b, Renderable Text b, Backend b R2) 
-        => Diagram b R2
+diagram :: Diagram2d
 diagram = square 1 # fc red <> circle 1 # frame 0.1
