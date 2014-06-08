@@ -7,6 +7,7 @@ module Main where
 import Diagrams.Prelude             hiding ((<>), value, option)
 import Diagrams.TwoD.Text
 import Diagrams.Backend.SVG
+import Diagrams.Backend.Postscript  as P
 import Diagrams.Backend.Rasterific
 import Data.List.Split              (splitOn)
 import Options.Applicative
@@ -40,10 +41,13 @@ writeDiagram :: Diagram2d -> Opts -> IO ()
 writeDiagram d opts =
   case splitOn "." (output opts) of
     [""] -> putStrLn "No output file given."
-    ps | last ps `elem` ["png"] -> do
+    ps | last ps `elem` ["png", "tif", "bmp", "jpg"] -> do
            renderRasterific (output opts) sizeSpec 100 (d :: Diagram2d)
        | last ps `elem` ["svg"] -> do
            renderSVG (output opts) sizeSpec (d :: Diagram2d)
+       | last ps `elem` ["ps", "eps"] -> do
+           renderDia P.Postscript 
+             (PostscriptOptions (output opts) sizeSpec EPS) (d :: Diagram2d)
        | otherwise -> putStrLn $ "Unknown file type: " ++ last ps
   where
     sizeSpec = 
@@ -61,4 +65,4 @@ main = execParser opts >>= writeDiagram diagram
 ------------------------------------------------------------------------------
 
 diagram :: Diagram2d
-diagram = square 1 # fc red <> circle 1 # frame 0.1
+diagram = square 1 # fc red <> circle 1 # fc blue # frame 0.1
